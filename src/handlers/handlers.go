@@ -5,9 +5,9 @@ import (
 	"net/http"
 )
 
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-  log.Println("healthCheck handler called...")
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	log.Println("healthCheck handler called...")
 
-  w.Header().Set(key string, value string)
-  // I gotta leave. 
+	w.WriteHeader(200)
+	w.Write([]byte("OK"))
 }
