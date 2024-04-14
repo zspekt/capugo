@@ -1,3 +1,1 @@
 package srv
-
-func setRoutes()

@@ -47,8 +47,13 @@ func ReturnServer() *http.Server {
 	// and the endpoint.  ↓
 	router.HandleFunc("GET /health", handlers.HealthCheck)
 
+	apiv1 := http.NewServeMux()
+	// any request that hits on the /api/v1/ path, will simply get redirected,
+	// stripping the /api/v1/
+	apiv1.Handle("/api/v1/", http.StripPrefix("/api/v1/", router))
+
 	return &http.Server{
-		Addr:    address + port,
-		Handler: router,
+		Addr:    address + ":" + port,
+		Handler: apiv1,
 	}
 }
