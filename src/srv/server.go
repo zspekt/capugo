@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joho/godotenv"
-
 	"github.com/zspekt/capugo/src/handlers"
 )
 
@@ -25,16 +23,18 @@ func init() {
 
 	// loads env vars. make sure you have the .env file in the dir you're running
 	// the server from
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env %v\n", err)
-		return
-	}
-
 	port = os.Getenv("PORT")
+	if len(port) == 0 {
+		port = "8080"
+		log.Println("port env vas was empty. Using default (8080)...")
+	}
 	log.Printf("port var has been set %v\n", port)
 
 	address = os.Getenv("ADDRESS")
+	if len(port) == 0 {
+		address = "localhost"
+		log.Println("address env var was empty. Using default (localhost)")
+	}
 	log.Printf("address var has been set %v\n", address)
 
 	log.Println("Server init func executed without any errors...")
