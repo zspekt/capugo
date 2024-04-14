@@ -1,0 +1,64 @@
+basePath: /api/v1
+definitions:
+  handlers.LoginRequest:
+    properties:
+      password:
+        example: secure_password
+        type: string
+      username:
+        example: email@email.com
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.authResp:
+    properties:
+      token:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Swagger API Documentation
+  title: CapuGO API Documentation
+paths:
+  /api/v1/health:
+    get:
+      consumes:
+      - application/json
+      description: Health Check
+      operationId: health-check
+      produces:
+      - application/json
+      responses: {}
+      summary: Health Check
+      tags:
+      - health
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login by username and password
+      operationId: auth-login
+      parameters:
+      - description: Login Request
+        in: body
+        name: loginRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.authResp'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Login Method
+      tags:
+      - Sign In
+swagger: "2.0"
