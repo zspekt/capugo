@@ -4,13 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/zspekt/capugo/src/handlers"
 )
-
-// GTG again but..
-
-// TODO: replace godotenv with standard library os.Getenv
 
 // for server
 var (
@@ -43,17 +37,10 @@ func init() {
 func ReturnServer() *http.Server {
 	router := http.NewServeMux()
 
-	// do note that ONLY ONE SPACE is allowed between the http method
-	// and the endpoint.  ↓
-	router.HandleFunc("GET /health", handlers.HealthCheck)
-
-	apiv1 := http.NewServeMux()
-	// any request that hits on the /api/v1/ path, will simply get redirected,
-	// stripping the /api/v1/
-	apiv1.Handle("/api/v1/", http.StripPrefix("/api/v1/", router))
+	setRoutes(router)
 
 	return &http.Server{
 		Addr:    address + ":" + port,
-		Handler: apiv1,
+		Handler: router,
 	}
 }
