@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"github.com/golang-jwt/jwt"
+	"log"
 	"net/http"
 	"os"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type Credentials struct {
@@ -21,19 +22,19 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 
 	priKey, err := os.ReadFile(os.Getenv("ID_RSA"))
 	if err != nil {
-		fmt.Println("Error al leer la clave privada:", err)
+		log.Println("Error al leer la clave privada:", err)
 		return
 	}
 
 	b64, err := base64.StdEncoding.DecodeString(string(priKey))
 	if err != nil {
-		fmt.Println("Error al decodificar la clave privada:", err)
+		log.Println("Error al decodificar la clave privada:", err)
 		return
 	}
 
 	token, err := claims.SignedString(b64)
 	if err != nil {
-		fmt.Println("Error al generar el token:", err)
+		log.Println("Error al generar el token:", err)
 		return
 	}
 
@@ -49,14 +50,13 @@ func ValidateToken(w http.ResponseWriter, r *http.Request) {
 		return []byte(os.Getenv("ID_RSA_PUB")), nil
 	})
 	if err != nil {
-		fmt.Println("Error al parsear el token:", err)
+		log.Println("Error al parsear el token:", err)
 		return
 	}
 
 	if parsedToken.Valid {
-		fmt.Println("Token válido")
+		log.Println("Token válido")
 	} else {
-		fmt.Println("Token inválido")
+		log.Println("Token inválido")
 	}
-
 }
