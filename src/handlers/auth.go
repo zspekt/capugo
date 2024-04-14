@@ -1,8 +1,15 @@
+// TODO:
+//      - func that verifies token
+
 package handlers
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -15,30 +22,63 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
+// reads privRSAKey from env var (which should be in base64), it then decodes it
+// after which, it is passed to pem.Decode, who'll try to find valid PEM data.
+// if all is well, we'll parse the private key, expecting it to be in the
+// PKCS #8, ASN.1 DER format. We then return a pointer to the private key.
+
+func readPrivRSAKeyFromEnv(env string) (*rsa.PrivateKey, error) {
+	// base64
+	var privRSAKey string = os.Getenv(env)
+
+	decoded, err := base64.StdEncoding.DecodeString(string(privRSAKey))
+	if err != nil {
+		log.Println("Error decoding private key:", err)
+		return nil, err
+	}
+
+	block, _ := pem.Decode([]byte(decoded))
+	// block will be nil if no pem data is found
+	if block == nil {
+		log.Println("Error decoding privRSAKey")
+		return nil, errors.New("Invalid private RSA key")
+	}
+	log.Println(block.Type)
+
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		log.Printf("Error parsing PKCS8 privRSAKey %v\n", err)
+		return nil, err
+	}
+
+	return key.(*rsa.PrivateKey), nil
+}
+
 func GenerateToken(w http.ResponseWriter, r *http.Request) {
+	// ###########################################################################
+	// ###########################################################################
 	claims := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"email": "example@example.com",
 	})
+	// ###########################################################################
+	// ###########################################################################
 
-	priKey, err := os.ReadFile(os.Getenv("ID_RSA"))
+	priKey, err := readPrivRSAKeyFromEnv("ID_RSA")
 	if err != nil {
-		log.Println("Error al leer la clave privada:", err)
+		log.Println("Error reading private key ->", err)
 		return
 	}
 
-	b64, err := base64.StdEncoding.DecodeString(string(priKey))
+	token, err := claims.SignedString(priKey)
 	if err != nil {
-		log.Println("Error al decodificar la clave privada:", err)
+		log.Println("Error al generar el token ->", err)
 		return
 	}
 
-	token, err := claims.SignedString(b64)
+	err = json.NewEncoder(w).Encode(token)
 	if err != nil {
-		log.Println("Error al generar el token:", err)
-		return
+		log.Fatalf("Error writing token to w -> %v\n", err)
 	}
-
-	json.NewEncoder(w).Encode(token)
 }
 
 func ValidateToken(w http.ResponseWriter, r *http.Request) {
