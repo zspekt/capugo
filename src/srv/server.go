@@ -1,7 +1,7 @@
 package srv
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 )
@@ -13,25 +13,25 @@ var (
 )
 
 func init() {
-	log.Println("Running server init func...")
+	slog.Info("running server init func...")
 
 	// loads env vars. make sure you have the .env file in the dir you're running
 	// the server from
 	port = os.Getenv("PORT")
 	if len(port) == 0 {
 		port = "8080"
-		log.Println("port env vas was empty. Using default (8080)...")
+		slog.Info("port env vas was empty. using default", "defPort", port)
 	}
-	log.Printf("port var has been set %v\n", port)
+	slog.Info("port var has been set", "port", port)
 
 	address = os.Getenv("ADDRESS")
 	if len(address) == 0 {
 		address = "localhost"
-		log.Println("address env var was empty. Using default (localhost)")
+		slog.Info("address env var was empty. using default", "defAddr", address)
 	}
-	log.Printf("address var has been set %v\n", address)
+	slog.Info("address var has been set", "address", address)
 
-	log.Println("Server init func executed without any errors...")
+	slog.Info("server init func executed without any errors...")
 }
 
 func ReturnServer() *http.Server {
