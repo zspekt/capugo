@@ -25,7 +25,7 @@ func init() {
 	log.Printf("port var has been set %v\n", port)
 
 	address = os.Getenv("ADDRESS")
-	if len(port) == 0 {
+	if len(address) == 0 {
 		address = "localhost"
 		log.Println("address env var was empty. Using default (localhost)")
 	}
