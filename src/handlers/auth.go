@@ -11,12 +11,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt"
+
+	"github.com/zspekt/capugo/internal/utils"
 )
 
 type Credentials struct {
@@ -33,29 +35,35 @@ PKCS #8, ASN.1 DER format. We then return a pointer to the private key.
 ref https://stackoverflow.com/questions/44230634/how-to-read-an-rsa-key-from-file
 */
 func readPrivRSAKeyFromEnv(env string) (*rsa.PrivateKey, error) {
+	// logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	// slog.SetLogLoggerLevel(level slog.Level)
+	// slog.SetDefault(logger)
+
+	slog.Debug("running readPrivRSAKeyFromEnv")
+
 	// base64
 	var privRSAKey string = os.Getenv(env)
 	if len(privRSAKey) == 0 {
-		log.Fatalf("%v env var is not set...", env)
+		utils.SlogFatal("Env var is not set", "env", env)
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(string(privRSAKey))
 	if err != nil {
-		log.Println("Error decoding private key:", err)
+		slog.Error("Error decoding privRSAKey from base64", "error", err)
 		return nil, err
 	}
 
 	block, _ := pem.Decode([]byte(decoded))
 	// block will be nil if no pem data is found
 	if block == nil {
-		log.Println("Error decoding privRSAKey")
-		return nil, errors.New("Invalid private RSA key")
+		err = errors.New("Invalid private RSA key")
+		slog.Error("Error decoding privRSAKey pem", "error", err)
+		return nil, err
 	}
-	log.Println(block.Type)
 
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		log.Printf("Error parsing PKCS8 privRSAKey %v\n", err)
+		slog.Error("Error parsing PKCS8 privRSAKey", "error", err)
 		return nil, err
 	}
 
@@ -63,6 +71,7 @@ func readPrivRSAKeyFromEnv(env string) (*rsa.PrivateKey, error) {
 }
 
 func GenerateToken(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("running GenerateToken")
 	// ###########################################################################
 	// ###########################################################################
 	claims := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
@@ -73,22 +82,23 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 
 	priKey, err := readPrivRSAKeyFromEnv("ID_RSA")
 	if err != nil {
-		log.Println("Error reading private key ->", err)
+		slog.Error("error reading private key", "error", err)
 		return
 	}
 
 	token, err := claims.SignedString(priKey)
 	if err != nil {
-		log.Println("Error al generar el token ->", err)
+		slog.Error("error generating token", "error", err)
 		return
 	}
 
 	err = json.NewEncoder(w).Encode(token)
 	if err != nil {
-		log.Fatalf("Error writing token to w -> %v\n", err)
+		utils.SlogFatal("error writing token to w", "error", err)
 	}
 }
 
+// gets Token from header
 func getTokenFromHeader(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -105,22 +115,24 @@ func getTokenFromHeader(r *http.Request) (string, error) {
 }
 
 func readPubRSAKeyFromEnv(env string) (*rsa.PublicKey, error) {
+	slog.Debug("running readPubRSAKeyFromEnv")
+
 	var publicRSAKey string = os.Getenv(env)
 	if len(publicRSAKey) == 0 {
-		log.Fatalf("%v env var is not set...", env)
+		utils.SlogFatal("env var is not set", "env", env)
 	}
 
 	block, _ := pem.Decode([]byte(publicRSAKey))
 	// block will be nil if no pem data is found
 	if block == nil {
-		log.Println("Error decoding publicRSAKey")
-		return nil, errors.New("Invalid Public RSA key")
+		err := errors.New("Invalid Public RSA key")
+		slog.Error("error decoding publicRSAKey", "error", err)
+		return nil, err
 	}
-	log.Println(block.Type)
 
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		log.Printf("Error parsing PKIX publicRSAKey %v\n", err)
+		slog.Error("error parsing PKIX publicRSAKey", "error", err)
 		return nil, err
 	}
 
@@ -131,19 +143,19 @@ func readPubRSAKeyFromEnv(env string) (*rsa.PublicKey, error) {
 func ValidateToken(w http.ResponseWriter, r *http.Request) {
 	token, err := getTokenFromHeader(r)
 	if err != nil {
-		log.Fatalf("Error getting token from auth header -> %v", err)
+		utils.SlogFatal("error getting token from auth header", "error", err)
 	}
 
 	pubRSAKey, err := readPubRSAKeyFromEnv("ID_RSA_PUB")
 	if err != nil {
-		log.Fatalf("Error reading pubRSAKey -> %v\n", err)
+		utils.SlogFatal("error reading pubRSAKey", "error", err)
 	}
 
 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return pubRSAKey, nil
 	})
 	if err != nil {
-		log.Println("Error parsing token ->", err)
+		slog.Error("error parsing token", "error", err)
 		return
 	}
 
@@ -154,11 +166,8 @@ func ValidateToken(w http.ResponseWriter, r *http.Request) {
 	data := claims["email"].(string)
 
 	if parsedToken.Valid {
-		log.Println("Token is valid")
-		log.Println(
-			data,
-		)
+		slog.Info("token is valid", "data", data)
 	} else {
-		log.Println("Token is NOT valid")
+		slog.Info("token is NOT valid")
 	}
 }
