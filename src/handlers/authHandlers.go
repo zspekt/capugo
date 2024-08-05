@@ -26,7 +26,7 @@ func GenerateToken(w http.ResponseWriter, r *http.Request) {
 	// ###########################################################################
 	// ###########################################################################
 
-	priKey, err := auth.ReadPrivRSAKeyFromEnv("ID_RSA")
+	priKey, err := auth.GetSecKey("ID_RSA")
 	if err != nil {
 		slog.Error("error reading private key", "error", err)
 		return
