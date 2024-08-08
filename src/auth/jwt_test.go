@@ -84,7 +84,7 @@ func TestGetSecKey(t *testing.T) {
 			Description: "calling GetSecKey with a parameter that corresponds to an env var that holds an RSA pub key",
 			Want:        nil,
 			WantError: errors.New(
-				"passed a public key but set the isPrivate flag to true",
+				"key block type <RSA PUBLIC KEY> does not match isPrivate argument <true>",
 			),
 			EnvVarKeyParameter: "testingPubKey",
 			EnvVarKeyToSet:     "testingPubKey",
@@ -97,21 +97,17 @@ func TestGetSecKey(t *testing.T) {
 			slog.Info("running test", "test", test.Description)
 			// if we are supposed to set an environment variable... AKA if this field is NOT empty
 			if test.EnvVarKeyToSet != "" {
-				// os.Setenv(test.EnvVarKeyToSet, test.EnvVarVal)
-				// defer os.Unsetenv(test.EnvVarKeyToSet)
 				t.Setenv(test.EnvVarKeyToSet, test.EnvVarVal)
-				// t.Cleanup(func(){})
 			}
 			key, err := GetSecKey(test.EnvVarKeyParameter)
 
-			gotVal := key == nil && test.Want == nil
-
-			if err == nil {
-				panic("error is nil wtf")
+			if err == nil { // only non-nil errors expected here
+				t.Fatal("nil error returned while ranging over the fail cases")
 			}
 
+			gotVal := key == nil && test.Want == nil
 			gotErr := err.Error() == test.WantError.Error()
-			// errors.Is(err error, target error)
+			// gotErr := errors.Is(err, test.WantError)
 
 			switch {
 			case gotVal && gotErr: // WIN

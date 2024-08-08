@@ -31,33 +31,30 @@ func DecodeAndParse(keyString string, isPrivate bool) (key, error) {
 		return nil, errors.New("pem.Decode couldn't find any pem data")
 	}
 
-	// still not convinced by this. will refactor
-	if isPrivate {
-		switch block.Type {
-		case "RSA PRIVATE KEY":
-			k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			key := k.(*rsa.PrivateKey)
-			return key, nil
-		case "RSA PUBLIC KEY":
-			return nil, errors.New("passed a public key but set the isPrivate flag to true")
+	switch {
+	case isPrivate && block.Type == "RSA PRIVATE KEY":
+		k, err := x509.ParsePKCS8PrivateKey(block.Bytes) // good case key is private
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		switch block.Type {
-		case "RSA PUBLIC KEY":
-			k, err := x509.ParsePKIXPublicKey(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			key := k.(*rsa.PublicKey)
-			return key, nil
-		case "RSA PRIVATE KEY":
-			return nil, errors.New("passed a private key but set the isPrivate flag to false")
+		key := k.(*rsa.PrivateKey)
+		return key, nil
+
+	case !isPrivate && block.Type == "RSA PUBLIC KEY":
+		k, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
 		}
+		key := k.(*rsa.PublicKey)
+		return key, nil
+
+	default:
+		return nil, fmt.Errorf(
+			"key block type <%v> does not match isPrivate argument <%v>",
+			block.Type,
+			isPrivate,
+		)
 	}
-	return nil, errors.New("no conditions were met. how did we get here?")
 }
 
 func readFromEnv(envVar string) (string, error) {
