@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+// interface for rsa.PrivateKey and rsa.PublicKey
 type key interface {
 	Size() int
 }
@@ -79,7 +80,7 @@ PKCS #8, ASN.1 DER format. It then return a pointer to the private key.
 
 ref https://stackoverflow.com/questions/44230634/how-to-read-an-rsa-key-from-file
 */
-func GetSecKey(env string) (any, error) {
+func GetSecKey(env string) (*rsa.PrivateKey, error) {
 	slog.Debug("running GetSecKey")
 
 	// base64
@@ -93,7 +94,7 @@ func GetSecKey(env string) (any, error) {
 		return nil, err
 	}
 
-	return k, nil
+	return k.(*rsa.PrivateKey), nil
 }
 
 // gets Token from header
@@ -115,32 +116,15 @@ func GetTokenFromHeader(r *http.Request) (string, error) {
 func GetPubKey(env string) (*rsa.PublicKey, error) {
 	slog.Debug("running readPubRSAKeyFromEnv")
 
-	publicRSAKey, ok := os.LookupEnv(env)
-	switch {
-	case !ok:
-		return nil, fmt.Errorf("env var <%v> is not set", env)
-	case publicRSAKey == "":
-		return nil, fmt.Errorf("env var <%v> is empty", env)
-	}
-
-	key, err := DecodeAndParse(publicRSAKey, false)
+	pubKey, err := readFromEnv(env)
 	if err != nil {
 		return nil, err
 	}
-	//
-	// block, _ := pem.Decode([]byte(publicRSAKey))
-	// // block will be nil if no pem data is found
-	// if block == nil {
-	// 	err := errors.New("Invalid Public RSA key")
-	// 	slog.Error("error decoding publicRSAKey", "error", err)
-	// 	return nil, err
-	// }
-	//
-	// key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	// if err != nil {
-	// 	slog.Error("error parsing PKIX publicRSAKey", "error", err)
-	// 	return nil, err
-	// }
 
-	return key.(*rsa.PublicKey), nil
+	k, err := DecodeAndParse(pubKey, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return k.(*rsa.PublicKey), nil
 }

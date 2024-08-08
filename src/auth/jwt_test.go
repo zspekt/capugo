@@ -1,3 +1,6 @@
+// TODO:
+//   - should separate the reading from env part of the tests from
+//     the actual parsing and decoding
 package auth
 
 import (
@@ -20,41 +23,6 @@ type testCasesGetSecKey struct {
 	EnvVarKeyParameter string // the parameter we'll pass to GetSecKey
 	EnvVarKeyToSet     string // the key of the environment variable we'll set for the test
 	EnvVarVal          string // the value of the environment variable we'll set for the test
-}
-
-type testCasesGetPubKey struct {
-	Description        string
-	Want               key
-	WantError          error
-	EnvVarKeyParameter string // the parameter we'll pass to GetPubKey
-	EnvVarKeyToSet     string // the key of the environment variable we'll set for the test
-	EnvVarVal          string // the value of the environment variable we'll set for the test
-}
-
-func TestCasesGetPubKey(t *testing.T) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want := &key.PublicKey
-
-	envVar := "ID_RSA_PUB"
-
-	// marshalledPubKey, err := x509.MarshalPKIXPublicKey(key.PublicKey)
-
-	readyKey, err := marshalAndEncode(t, want)
-
-	t.Setenv(envVar, string(readyKey))
-
-	got, err := GetPubKey(envVar)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("Deep equal is false: keys aren't identical") // oh no :(
-	}
 }
 
 func TestGetSecKey(t *testing.T) {
@@ -130,8 +98,9 @@ func TestGetSecKey(t *testing.T) {
 	for _, test := range failCases {
 		t.Run(test.Description, func(t *testing.T) {
 			slog.Info("running test", "test", test.Description)
-			// if we are supposed to set an environment variable... AKA if this field is NOT empty
-			if test.EnvVarKeyToSet != "" {
+
+			// if we are supposed to set an environment variable...
+			if test.EnvVarKeyToSet != "" { // AKA if this field is NOT empty
 				t.Setenv(test.EnvVarKeyToSet, test.EnvVarVal)
 			}
 			key, err := GetSecKey(test.EnvVarKeyParameter)
@@ -145,12 +114,16 @@ func TestGetSecKey(t *testing.T) {
 			// gotErr := errors.Is(err, test.WantError)
 
 			switch {
+
 			case gotVal && gotErr: // WIN
 				break
+
 			case gotVal && !gotErr: // GOOD VAL, BAD ERROR
 				t.Fatalf("good value. got error -> %v || wanted -> %v", err, test.WantError)
+
 			case !gotVal && gotErr: // BAD VAL, GOOD ERROR
 				t.Fatalf("good error. got value -> %v || wanted -> %v", key, test.Want)
+
 			case !gotVal && !gotErr: // BAD VAL, BAD ERROR
 				t.Fatalf(
 					"got error -> <%v> wanted error -> <%v> ##### got value -> <%v> wanted value <%v>",
@@ -162,6 +135,7 @@ func TestGetSecKey(t *testing.T) {
 			}
 		})
 	}
+
 	passCase := testCasesGetSecKey{
 		Description:        "calling GetSecKey with a parameter that corresponds to an env var which holds an RSA sec key",
 		Want:               nil,
@@ -172,6 +146,7 @@ func TestGetSecKey(t *testing.T) {
 	}
 
 	t.Run(passCase.Description, func(t *testing.T) {
+		want := key
 		t.Setenv(passCase.EnvVarKeyToSet, passCase.EnvVarVal)
 
 		seckey, err := GetSecKey(passCase.EnvVarKeyParameter)
@@ -179,10 +154,33 @@ func TestGetSecKey(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 
-		if !reflect.DeepEqual(key, seckey) {
-			t.Fatalf("Deep equal is false: keys aren't identical") // oh no :(
+		if !want.Equal(seckey) {
+			t.Fatalf("keys are not equal") // oh no :(
 		}
 	})
+}
+
+func TestCasesGetPubKey(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &key.PublicKey
+	envVar := "ID_RSA_PUB"
+
+	marshalledEncodedKey, err := marshalAndEncode(t, want)
+
+	t.Setenv(envVar, string(marshalledEncodedKey))
+
+	got, err := GetPubKey(envVar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !got.Equal(want) {
+		t.Fatal("keys are not equal")
+	}
 }
 
 func marshalAndEncode(t testing.TB, key key) ([]byte, error) {
