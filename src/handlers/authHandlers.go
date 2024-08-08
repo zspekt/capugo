@@ -51,7 +51,7 @@ func ValidateToken(w http.ResponseWriter, r *http.Request) {
 		utils.SlogFatal("error getting token from auth header", "error", err)
 	}
 
-	pubRSAKey, err := auth.ReadPubRSAKeyFromEnv("ID_RSA_PUB")
+	pubRSAKey, err := auth.GetPubKey("ID_RSA_PUB")
 	if err != nil {
 		utils.SlogFatal("error reading pubRSAKey", "error", err)
 	}

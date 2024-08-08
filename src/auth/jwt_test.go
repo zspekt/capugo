@@ -22,6 +22,41 @@ type testCasesGetSecKey struct {
 	EnvVarVal          string // the value of the environment variable we'll set for the test
 }
 
+type testCasesGetPubKey struct {
+	Description        string
+	Want               key
+	WantError          error
+	EnvVarKeyParameter string // the parameter we'll pass to GetPubKey
+	EnvVarKeyToSet     string // the key of the environment variable we'll set for the test
+	EnvVarVal          string // the value of the environment variable we'll set for the test
+}
+
+func TestCasesGetPubKey(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &key.PublicKey
+
+	envVar := "ID_RSA_PUB"
+
+	// marshalledPubKey, err := x509.MarshalPKIXPublicKey(key.PublicKey)
+
+	readyKey, err := marshalAndEncode(t, want)
+
+	t.Setenv(envVar, string(readyKey))
+
+	got, err := GetPubKey(envVar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Deep equal is false: keys aren't identical") // oh no :(
+	}
+}
+
 func TestGetSecKey(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

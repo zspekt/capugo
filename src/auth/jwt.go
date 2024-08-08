@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/zspekt/capugo/internal/utils"
 )
 
 type key interface {
@@ -66,7 +64,6 @@ func readFromEnv(envVar string) (string, error) {
 	v, ok := os.LookupEnv(envVar)
 	switch {
 	case !ok:
-		fmt.Printf("\nhere is the shit that should be empty -> %v\n", envVar)
 		return "", fmt.Errorf("%v var missing from environment...", envVar)
 	case v == "":
 		return "", fmt.Errorf("%v var set but empty (how did this happen?)...", envVar)
@@ -115,27 +112,35 @@ func GetTokenFromHeader(r *http.Request) (string, error) {
 	return token, nil
 }
 
-func ReadPubRSAKeyFromEnv(env string) (*rsa.PublicKey, error) {
+func GetPubKey(env string) (*rsa.PublicKey, error) {
 	slog.Debug("running readPubRSAKeyFromEnv")
 
-	var publicRSAKey string = os.Getenv(env)
-	if len(publicRSAKey) == 0 {
-		utils.SlogFatal("env var is not set", "env", env)
+	publicRSAKey, ok := os.LookupEnv(env)
+	switch {
+	case !ok:
+		return nil, fmt.Errorf("env var <%v> is not set", env)
+	case publicRSAKey == "":
+		return nil, fmt.Errorf("env var <%v> is empty", env)
 	}
 
-	block, _ := pem.Decode([]byte(publicRSAKey))
-	// block will be nil if no pem data is found
-	if block == nil {
-		err := errors.New("Invalid Public RSA key")
-		slog.Error("error decoding publicRSAKey", "error", err)
-		return nil, err
-	}
-
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	key, err := DecodeAndParse(publicRSAKey, false)
 	if err != nil {
-		slog.Error("error parsing PKIX publicRSAKey", "error", err)
 		return nil, err
 	}
+	//
+	// block, _ := pem.Decode([]byte(publicRSAKey))
+	// // block will be nil if no pem data is found
+	// if block == nil {
+	// 	err := errors.New("Invalid Public RSA key")
+	// 	slog.Error("error decoding publicRSAKey", "error", err)
+	// 	return nil, err
+	// }
+	//
+	// key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	// if err != nil {
+	// 	slog.Error("error parsing PKIX publicRSAKey", "error", err)
+	// 	return nil, err
+	// }
 
 	return key.(*rsa.PublicKey), nil
 }
