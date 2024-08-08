@@ -13,7 +13,7 @@ import (
 	"testing"
 )
 
-type cases struct {
+type testCasesGetSecKey struct {
 	Description        string
 	Want               key
 	WantError          error
@@ -43,7 +43,7 @@ func TestGetSecKey(t *testing.T) {
 	base64EncodedTrash := make([]byte, length)
 	base64.StdEncoding.Encode(base64EncodedTrash, []byte(trashString))
 
-	failCases := []cases{
+	failCases := []testCasesGetSecKey{
 		{
 			Description:        "calling GetSecKey with an empty EnvVarKeyParameter",
 			Want:               nil,
@@ -127,7 +127,7 @@ func TestGetSecKey(t *testing.T) {
 			}
 		})
 	}
-	passCase := cases{
+	passCase := testCasesGetSecKey{
 		Description:        "calling GetSecKey with a parameter that corresponds to an env var which holds an RSA sec key",
 		Want:               nil,
 		WantError:          nil,
